@@ -1,8 +1,13 @@
 # SHInEyVErSE
 
-A local, single-file web GUI for generating images and videos through your own [ComfyUI](https://github.com/comfyanonymous/ComfyUI) install. No cloud, no subscriptions, no OneDrive - everything stays on your machine.
+A local, single-file web GUI for generating images and videos through your own [ComfyUI](https://github.com/comfyanonymous/ComfyUI) install. No cloud, no subscriptions, no OneDrive - everything stays local.
 
 Built with FastAPI. One Python file, no build step, no frontend framework.
+
+## Repository
+
+- Source: https://github.com/dqikfox/SHinEyVErsE
+- License: MIT
 
 ## Features
 
@@ -19,9 +24,22 @@ Built with FastAPI. One Python file, no build step, no frontend framework.
 - Built-in gallery of everything you've generated
 - All outputs saved straight to local folders (`AI_Output/Images`, `AI_Output/Videos`) - deliberately outside any OneDrive-synced directory
 
+## Model and asset references
+
+Use the official or primary project pages below when downloading models and dependencies:
+
+- ComfyUI: https://github.com/comfyanonymous/ComfyUI
+- Stable Diffusion 1.5 base checkpoint: https://huggingface.co/runwayml/stable-diffusion-v1-5
+- SDXL base checkpoint: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0
+- FLUX.1 Schnell: https://huggingface.co/black-forest-labs/FLUX.1-schnell
+- Wan 2.2 model collection: https://huggingface.co/Wan-AI
+- Wan 2.2 Lightning LoRA / related assets: https://huggingface.co/Wan-AI
+
+If you use different filenames or folder layouts, update the paths in `app.py` to match your local ComfyUI installation.
+
 ## How it works
 
-The FastAPI backend builds the exact ComfyUI API graph for whichever model you pick, submits it to your running ComfyUI instance's `/prompt` endpoint, polls `/history` until it's done, then copies the result into the local output folders and serves it back to the page.
+The FastAPI backend builds the exact ComfyUI API graph for whichever model you pick, submits it to your running ComfyUI instance's `/prompt` endpoint, polls `/history` until it's done, then copies the resulting image or video into the local output folder.
 
 ## Prerequisites
 
@@ -35,15 +53,15 @@ The FastAPI backend builds the exact ComfyUI API graph for whichever model you p
 | SDXL | `checkpoints/sd_xl_base_1.0.safetensors` |
 | Flux Schnell | `diffusion_models/flux1-schnell.safetensors`, `text_encoders/clip_l.safetensors`, `text_encoders/t5xxl_fp8_e4m3fn.safetensors`, `vae/ae.safetensors` |
 | Wan2.2 5B T2V | `diffusion_models/wan2.2_ti2v_5B_fp16.safetensors`, `text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors`, `vae/wan2.2_vae.safetensors` |
-| Wan2.2 14B I2V | `diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors`, `diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors`, `loras/Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors`, `loras/Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors`, `vae/wan_2.1_vae.safetensors`, `text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors` (shared with the 5B model above)
+| Wan2.2 14B I2V | `diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors`, `diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors`, `loras/Wan2.2-Lightning_I2V-A14B-4steps.safetensors` |
 
 You only need the model(s) for the modes you actually want to use - SD1.5 alone is enough to try the app out.
 
 ## Setup
 
 ```bash
-git clone <this-repo-url>
-cd SHInEyVErSE
+git clone https://github.com/dqikfox/SHinEyVErsE.git
+cd SHinEyVErsE
 python -m venv venv
 venv\Scripts\activate          # Windows
 pip install -r requirements.txt
@@ -67,4 +85,4 @@ On Windows, `Launch_SHInEyVErSE.bat` does this for you and auto-opens the browse
 
 - This is a personal/local tool, not hardened for any kind of public or multi-user deployment - there's no auth on the endpoints.
 - Paths in `app.py` are currently hardcoded to one machine's folder layout; adjust `COMFY_OUTPUT`, `AI_IMAGES`, `AI_VIDEOS`, and `WAN_TEMPLATE` for your own setup.
-- The Wan2.2 14B I2V graph is a flattened, faithful translation of ComfyUI's own official subgraph template, fixed to the fast 4-step Lightning-LoRA path (the official template also supports a slower non-LoRA mode via a toggle, which isn't exposed here).
+- The Wan2.2 14B I2V graph is a flattened, faithful translation of ComfyUI's own official subgraph template, fixed to the fast 4-step Lightning-LoRA path.
