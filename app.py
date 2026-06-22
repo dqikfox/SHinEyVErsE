@@ -215,33 +215,83 @@ HTML_PAGE = r"""
 <meta charset="utf-8">
 <title>SHInEyVErSE</title>
 <style>
-  :root { color-scheme: dark; }
-  body { background:#171717; color:#e6e6e6; font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:30px; }
-  .wrap { max-width: 900px; margin: 0 auto; }
-  h1 { font-size: 26px; margin-bottom: 4px; background: linear-gradient(90deg,#4a7dff,#ff4ad1); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .sub { color:#999; margin-bottom: 24px; font-size: 13px; }
-  .card { background:#222; border:1px solid #333; border-radius:10px; padding:22px; margin-bottom:18px; }
-  label { display:block; font-size:12px; color:#aaa; margin-bottom:5px; margin-top:14px; }
-  textarea, input, select { width:100%; box-sizing:border-box; background:#2b2b2b; color:#eee; border:1px solid #3c3c3c; border-radius:6px; padding:9px 10px; font-size:14px; font-family:inherit; }
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@500;600;700&display=swap');
+  :root { color-scheme: light; }
+  body {
+    background: #fff0f6;
+    background-image:
+      radial-gradient(circle, #ffd6ea 2px, transparent 2.5px),
+      radial-gradient(circle, #c9ecff 2px, transparent 2.5px);
+    background-size: 38px 38px, 38px 38px;
+    background-position: 0 0, 19px 19px;
+    color: #5a3d52;
+    font-family: 'Quicksand', 'Segoe UI', Arial, sans-serif;
+    margin: 0; padding: 30px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 {
+    font-family: 'Baloo 2', cursive;
+    font-size: 38px; margin-bottom: 2px; text-align:center;
+    color: #ff6fa5;
+    text-shadow: 2px 2px 0 #fff, 4px 4px 0 #ffd1e6;
+    letter-spacing: 1px;
+  }
+  h1::before { content: "\01F380 "; }
+  h1::after { content: " \01F380"; }
+  .sub { color:#a86b95; margin-bottom: 24px; font-size: 14px; text-align:center; font-weight:600; }
+  .sub::before { content: "\01F43E "; }
+  .sub::after { content: " \01F43E"; }
+  .card {
+    background:#fffafd;
+    border: 3px dashed #ffb6d9;
+    border-radius:22px;
+    padding:24px;
+    margin-bottom:22px;
+    box-shadow: 6px 6px 0 #ffd1e6, 0 0 0 6px #fff inset;
+  }
+  label { display:block; font-size:13px; color:#b3568f; font-weight:700; margin-bottom:5px; margin-top:14px; }
+  textarea, input, select {
+    width:100%; box-sizing:border-box;
+    background:#fff7fb; color:#5a3d52;
+    border:2px solid #ffc9e2; border-radius:14px;
+    padding:10px 12px; font-size:14px; font-family:inherit;
+  }
+  textarea:focus, input:focus, select:focus { outline:none; border-color:#ff8fc0; box-shadow:0 0 0 3px #ffe1ef; }
   textarea { resize:vertical; min-height:64px; }
   .row { display:flex; gap:14px; }
   .row > div { flex:1; }
   .check { display:flex; align-items:center; gap:8px; margin-top:14px; }
   .check input { width:auto; }
-  button { margin-top:20px; background:#4a7dff; color:#fff; border:none; border-radius:8px; padding:12px 22px; font-size:15px; font-weight:600; cursor:pointer; }
-  button:disabled { background:#444; cursor:not-allowed; }
-  .status { margin-top:16px; font-size:13px; color:#ffb84a; }
-  .err { color:#ff6b6b; }
+  button {
+    margin-top:20px;
+    background: linear-gradient(180deg,#ffa8d2,#ff7fb8);
+    color:#fff; border:3px solid #fff; border-radius:18px;
+    padding:13px 26px; font-size:16px; font-weight:800; font-family:'Baloo 2',cursive;
+    cursor:pointer; box-shadow: 4px 4px 0 #d9477f;
+    transition: transform 0.1s;
+  }
+  button:hover { transform: translateY(-2px); }
+  button:active { transform: translateY(2px); box-shadow: 2px 2px 0 #d9477f; }
+  button:disabled { background:#e8c4d6; box-shadow:none; cursor:not-allowed; }
+  .status { margin-top:16px; font-size:13px; color:#e8a23c; font-weight:700; }
+  .err { color:#ff5577; }
   .result { margin-top:20px; text-align:center; }
-  .result img, .result video { max-width:100%; border-radius:8px; border:1px solid #333; }
+  .result img, .result video {
+    max-width:100%; border-radius:18px; border:5px solid #fff;
+    box-shadow: 0 0 0 4px #ffc9e2, 6px 6px 14px rgba(255,143,192,0.35);
+  }
   .imgOnly, .videoOnly, .i2vOnly { display:none; }
-  .hint { font-size:11px; color:#777; margin-top:3px; }
-  .gallery { display:grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-  .gallery .item { position:relative; border-radius:8px; overflow:hidden; border:1px solid #333; background:#000; }
+  .hint { font-size:11px; color:#c98ab0; margin-top:3px; }
+  .gallery { display:grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .gallery .item {
+    position:relative; border-radius:14px; overflow:hidden;
+    border:3px solid #ffd1e6; background:#fff; box-shadow:3px 3px 0 #ffd1e6;
+  }
   .gallery img, .gallery video { width:100%; height:120px; object-fit:cover; display:block; }
-  .gallery .name { font-size:9px; color:#888; padding:4px; word-break:break-all; }
-  h2 { font-size:16px; color:#ccc; }
-  .preview { max-width:200px; border-radius:6px; margin-top:8px; display:none; }
+  .gallery .name { font-size:9px; color:#b3568f; padding:4px; word-break:break-all; font-weight:600; }
+  h2 { font-family:'Baloo 2',cursive; font-size:20px; color:#ff6fa5; }
+  h2::before { content: "\02728 "; }
+  .preview { max-width:200px; border-radius:14px; margin-top:8px; display:none; border:3px solid #ffc9e2; }
 </style>
 </head>
 <body>
