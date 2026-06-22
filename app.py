@@ -353,11 +353,25 @@ HTML_PAGE = r"""
     font-size:15px; margin-bottom:18px;
   }
   .qmark {
+    position:relative;
     display:inline-flex; align-items:center; justify-content:center;
-    width:16px; height:16px; border-radius:50%;
-    background:#ffd1e6; color:#d9477f; font-size:11px; font-weight:800;
-    cursor:help; margin-left:2px; vertical-align:middle;
+    width:18px; height:18px; border-radius:50%;
+    background:#ffd1e6; color:#d9477f; font-size:12px; font-weight:800;
+    cursor:pointer; margin-left:3px; vertical-align:middle;
+    outline:none;
   }
+  .qmark:hover, .qmark:focus { background:#ff8fc0; color:#fff; }
+  .qmark::after {
+    content: attr(data-tip);
+    position:absolute; bottom:140%; left:50%; transform:translateX(-50%) scale(0.9);
+    background:#5a3d52; color:#fff; padding:8px 12px; border-radius:10px;
+    font-size:12px; font-weight:600; font-family:'Quicksand',sans-serif;
+    width:200px; line-height:1.4; text-align:left;
+    box-shadow:3px 3px 8px rgba(0,0,0,0.25);
+    opacity:0; visibility:hidden; transition:opacity 0.15s, transform 0.15s;
+    z-index:50; pointer-events:none;
+  }
+  .qmark:hover::after, .qmark:focus::after { opacity:1; visibility:visible; transform:translateX(-50%) scale(1); }
   .starters { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .starter {
     background:#fff7fb; color:#d9477f; border:2px solid #ffc9e2; border-radius:14px;
@@ -372,6 +386,23 @@ HTML_PAGE = r"""
   }
   details.advanced { margin-top:18px; border-top:2px dashed #ffd1e6; padding-top:14px; }
   details.advanced summary {
+  .pokeball {
+    margin-top:10px; margin-left:8px;
+    background: linear-gradient(180deg,#ffe066,#ffb700); color:#7a4d00;
+    border:3px solid #fff; box-shadow:4px 4px 0 #cc8e00;
+  }
+  .resultItem { display:inline-block; margin:10px; vertical-align:top; }
+  .pokemonReveal {
+    font-family:'Baloo 2',cursive; font-size:22px; color:#ff6fa5;
+    text-align:center; margin-bottom:10px; padding:10px;
+    border-radius:14px; background:#fff0f6; border:3px dashed #ffb6d9;
+  }
+  .pokemonReveal.shiny {
+    color:#caa000; background:linear-gradient(135deg,#fff7d6,#ffe680,#fff7d6);
+    border:3px solid #ffd700; box-shadow:0 0 18px rgba(255,215,0,0.7);
+    animation: shine 1.5s ease-in-out infinite alternate;
+  }
+  @keyframes shine { from { box-shadow:0 0 10px rgba(255,215,0,0.5); } to { box-shadow:0 0 28px rgba(255,215,0,0.9); } }
     cursor:pointer; font-family:'Baloo 2',cursive; color:#b3568f; font-weight:700; font-size:14px;
   }
   .dl {
@@ -391,15 +422,16 @@ HTML_PAGE = r"""
   <div class="counter" id="counterBadge">Loading creations counter...</div>
 
   <div class="card">
-    <label>What should I make? <span class="qmark" title="Tell me what to draw or make a movie of! Be as silly or amazing as you want.">?</span></label>
+    <label>What should I make? <span class="qmark" tabindex="0" data-tip="Tell me what to draw or make a movie of! Be as silly or amazing as you want.">?</span></label>
     <textarea id="prompt" placeholder="Type your idea here, or tap a button below for inspiration!"></textarea>
 
     <div class="starters" id="starters"></div>
     <button type="button" class="surprise" onclick="surpriseMe()">Surprise Me!</button>
+    <button type="button" class="pokeball" onclick="randomPokemon()">Random Pokemon! (1 in 50 Shiny!)</button>
 
     <div class="row">
       <div>
-        <label>Picture or Movie? <span class="qmark" title="Pick Picture for a still image, or Movie for something that moves!">?</span></label>
+        <label>Picture or Movie? <span class="qmark" tabindex="0" data-tip="Pick Picture for a still image, or Movie for something that moves!">?</span></label>
         <select id="mode">
           <option value="image">Picture</option>
           <option value="video">Movie (from words)</option>
@@ -407,13 +439,21 @@ HTML_PAGE = r"""
         </select>
       </div>
       <div>
-        <label>Style <span class="qmark" title="Different styles look different and take different amounts of time!">?</span></label>
+        <label>Style <span class="qmark" tabindex="0" data-tip="Different styles look different and take different amounts of time!">?</span></label>
         <select id="model"></select>
       </div>
+
+    <div class="row">
+      <div>
+        <label>How many at once? <span class="qmark" tabindex="0" data-tip="Make several pictures or movies in one go, so you can pick your favorite! More takes longer.">?</span></label>
+        <input type="number" id="genCount" value="1" min="1" max="4">
+      </div>
+      <div></div>
+    </div>
     </div>
 
     <div class="i2vOnly" id="imageUploadField">
-      <label>Starting photo <span class="qmark" title="Upload a picture to bring to life as a movie!">?</span></label>
+      <label>Starting photo <span class="qmark" tabindex="0" data-tip="Upload a picture to bring to life as a movie!">?</span></label>
       <input type="file" id="imageFile" accept="image/*">
       <img id="imagePreview" class="preview">
     </div>
@@ -424,46 +464,46 @@ HTML_PAGE = r"""
     <details class="advanced">
       <summary>Grown-up settings</summary>
 
-      <label>Negative prompt <span class="qmark" title="Things you do NOT want to see in the result (optional).">?</span></label>
+      <label>Negative prompt <span class="qmark" tabindex="0" data-tip="Things you do NOT want to see in the result (optional).">?</span></label>
       <textarea id="negative" placeholder="Things to avoid in the result"></textarea>
 
       <div class="row">
         <div>
-          <label>Width <span class="qmark" title="How wide the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
+          <label>Width <span class="qmark" tabindex="0" data-tip="How wide the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
           <input type="number" id="width" step="8">
         </div>
         <div>
-          <label>Height <span class="qmark" title="How tall the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
+          <label>Height <span class="qmark" tabindex="0" data-tip="How tall the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
           <input type="number" id="height" step="8">
         </div>
       </div>
 
       <div class="row videoOnly" id="videoFields">
         <div>
-          <label>Length (frames) <span class="qmark" title="How long the movie is. More frames = longer movie but slower to make.">?</span></label>
+          <label>Length (frames) <span class="qmark" tabindex="0" data-tip="How long the movie is. More frames = longer movie but slower to make.">?</span></label>
           <input type="number" id="length">
           <div class="hint">at 24fps, 121 frames ~= 5 seconds</div>
         </div>
         <div>
-          <label>FPS <span class="qmark" title="Frames Per Second - how smooth the movie looks.">?</span></label>
+          <label>FPS <span class="qmark" tabindex="0" data-tip="Frames Per Second - how smooth the movie looks.">?</span></label>
           <input type="number" id="fps">
         </div>
       </div>
 
       <div class="row">
         <div>
-          <label>Steps <span class="qmark" title="How many times the computer polishes the picture. More steps can look better but takes longer!">?</span></label>
+          <label>Steps <span class="qmark" tabindex="0" data-tip="How many times the computer polishes the picture. More steps can look better but takes longer!">?</span></label>
           <input type="number" id="steps">
         </div>
         <div>
-          <label>CFG <span class="qmark" title="How closely the computer follows your exact words. Higher = more obedient, lower = more creative.">?</span></label>
+          <label>CFG <span class="qmark" tabindex="0" data-tip="How closely the computer follows your exact words. Higher = more obedient, lower = more creative.">?</span></label>
           <input type="number" id="cfg" step="0.1">
         </div>
       </div>
 
       <div class="row">
         <div>
-          <label>Sampler <span class="qmark" title="A technical setting for HOW the computer paints. Fun to experiment with!">?</span></label>
+          <label>Sampler <span class="qmark" tabindex="0" data-tip="A technical setting for HOW the computer paints. Fun to experiment with!">?</span></label>
           <select id="sampler">
             <option>euler</option>
             <option>euler_ancestral</option>
@@ -472,7 +512,7 @@ HTML_PAGE = r"""
           </select>
         </div>
         <div>
-          <label>Scheduler <span class="qmark" title="Another technical painting setting - works together with Sampler.">?</span></label>
+          <label>Scheduler <span class="qmark" tabindex="0" data-tip="Another technical painting setting - works together with Sampler.">?</span></label>
           <select id="scheduler">
             <option>normal</option>
             <option>simple</option>
@@ -483,12 +523,12 @@ HTML_PAGE = r"""
 
       <div class="row">
         <div>
-          <label>Seed <span class="qmark" title="A magic number behind the randomness. The same seed + same prompt = the exact same picture again!">?</span></label>
+          <label>Seed <span class="qmark" tabindex="0" data-tip="A magic number behind the randomness. The same seed + same prompt = the exact same picture again!">?</span></label>
           <input type="number" id="seed" value="0">
         </div>
         <div class="check" style="margin-top:34px;">
           <input type="checkbox" id="randomize" checked>
-          <label style="margin:0;">Randomize seed each run <span class="qmark" title="Tick this to get a brand new surprise every time you click Make It!">?</span></label>
+          <label style="margin:0;">Randomize seed each run <span class="qmark" tabindex="0" data-tip="Tick this to get a brand new surprise every time you click Make It!">?</span></label>
         </div>
       </div>
     </details>
@@ -528,6 +568,27 @@ function buildStarterButtons() {
     b.onclick = () => { document.getElementById('prompt').value = fullPrompt; };
     wrap.appendChild(b);
   }
+}
+
+const POKEMON_NAMES = [
+  "Pikachu","Bulbasaur","Charmander","Squirtle","Eevee","Jigglypuff","Snorlax","Gengar",
+  "Gyarados","Dragonite","Mewtwo","Mew","Lucario","Garchomp","Greninja","Charizard",
+  "Blastoise","Venusaur","Vaporeon","Jolteon","Flareon","Umbreon","Espeon","Sylveon",
+  "Pichu","Togepi","Cyndaquil","Totodile","Chikorita","Torchic","Mudkip","Treecko",
+  "Piplup","Turtwig","Chimchar","Oshawott","Snivy","Tepig","Froakie","Fennekin",
+  "Chespin","Rowlet","Litten","Popplio","Sobble","Scorbunny","Grookey","Pidgeotto",
+  "Psyduck","Slowpoke","Ditto","Magikarp","Lapras","Articuno","Zapdos","Moltres",
+];
+
+function randomPokemon() {
+  const name = POKEMON_NAMES[Math.floor(Math.random() * POKEMON_NAMES.length)];
+  const isShiny = Math.floor(Math.random() * 50) === 0;
+  const prompt = isShiny
+    ? "official Pokemon anime style artwork of a rare SHINY " + name + ", shimmering alternate-colored, sparkling magical glow, vibrant unusual colors, cute, highly detailed"
+    : "official Pokemon anime style artwork of " + name + ", vibrant colors, cute, highly detailed";
+  document.getElementById('prompt').value = prompt;
+  lastPokemonReveal = { name: name, shiny: isShiny };
+  generate();
 }
 
 function surpriseMe() {
@@ -614,19 +675,20 @@ async function loadGallery() {
   }
 }
 
+let lastPokemonReveal = null;
+
 async function generate() {
   const btn = document.getElementById('goBtn');
   const statusEl = document.getElementById('status');
   const resultEl = document.getElementById('result');
   resultEl.innerHTML = '';
   statusEl.className = 'status';
-  let seed = document.getElementById('seed').value;
-  if (document.getElementById('randomize').checked) {
-    seed = Math.floor(Math.random() * 1000000000000);
-    document.getElementById('seed').value = seed;
-  }
+
   const modelKey = document.getElementById('model').value;
   const info = MODELS[modelKey];
+  const isVideo = (info.kind === 'video' || info.kind === 'video_i2v');
+  const randomizeOn = document.getElementById('randomize').checked;
+  const baseSeed = document.getElementById('seed').value;
 
   let imageFilename = '';
   if (info.kind === 'video_i2v') {
@@ -644,53 +706,84 @@ async function generate() {
     imageFilename = udata.filename;
   }
 
-  const fd = new FormData();
-  fd.append('model', modelKey);
-  fd.append('prompt', document.getElementById('prompt').value);
-  fd.append('negative', document.getElementById('negative').value);
-  fd.append('width', document.getElementById('width').value);
-  fd.append('height', document.getElementById('height').value);
-  fd.append('steps', document.getElementById('steps').value);
-  fd.append('cfg', document.getElementById('cfg').value);
-  fd.append('seed', seed);
-  fd.append('sampler', document.getElementById('sampler').value);
-  fd.append('scheduler', document.getElementById('scheduler').value);
-  fd.append('length', document.getElementById('length').value || 121);
-  fd.append('fps', document.getElementById('fps').value || 24);
-  fd.append('image_filename', imageFilename);
+  let count = parseInt(document.getElementById('genCount').value) || 1;
+  count = Math.max(1, Math.min(4, count));
 
   btn.disabled = true;
-  const isVideo = (info.kind === 'video' || info.kind === 'video_i2v');
-  statusEl.textContent = isVideo ? 'Generating video... this can take several minutes.' : 'Generating image...';
+  const results = [];
   const startTime = Date.now();
   const timer = setInterval(() => {
     const s = Math.floor((Date.now() - startTime) / 1000);
-    statusEl.textContent = (isVideo ? 'Generating video... ' : 'Generating image... ') + s + 's elapsed';
+    statusEl.textContent = 'Making ' + (isVideo ? 'movie' : 'picture') + ' ' + (results.length + 1) + ' of ' + count + '... ' + s + 's elapsed';
   }, 1000);
 
+  let lastGenNum = null;
   try {
-    const r = await fetch('/generate', { method: 'POST', body: fd });
-    const data = await r.json();
-    clearInterval(timer);
-    btn.disabled = false;
-    if (data.ok) {
-      statusEl.textContent = 'Done! This is Creation #' + data.gen_num + '. Great job!'; loadStats();
-      if (data.kind === 'video') {
-        resultEl.innerHTML = '<video src="' + data.url + '" controls autoplay loop></video><br><a class="dl" href="' + data.url + '" download>Download</a>';
+    for (let i = 0; i < count; i++) {
+      const seed = randomizeOn ? Math.floor(Math.random() * 1000000000000) : baseSeed;
+      if (i === 0) document.getElementById('seed').value = seed;
+
+      const fd = new FormData();
+      fd.append('model', modelKey);
+      fd.append('prompt', document.getElementById('prompt').value);
+      fd.append('negative', document.getElementById('negative').value);
+      fd.append('width', document.getElementById('width').value);
+      fd.append('height', document.getElementById('height').value);
+      fd.append('steps', document.getElementById('steps').value);
+      fd.append('cfg', document.getElementById('cfg').value);
+      fd.append('seed', seed);
+      fd.append('sampler', document.getElementById('sampler').value);
+      fd.append('scheduler', document.getElementById('scheduler').value);
+      fd.append('length', document.getElementById('length').value || 121);
+      fd.append('fps', document.getElementById('fps').value || 24);
+      fd.append('image_filename', imageFilename);
+
+      const r = await fetch('/generate', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (data.ok) {
+        results.push(data);
+        lastGenNum = data.gen_num;
       } else {
-        resultEl.innerHTML = '<img src="' + data.url + '"><br><a class="dl" href="' + data.url + '" download>Download</a>';
+        statusEl.className = 'status err';
+        statusEl.textContent = 'Error: ' + data.error;
       }
-      loadGallery();
-    } else {
-      statusEl.className = 'status err';
-      statusEl.textContent = 'Error: ' + data.error;
     }
   } catch (e) {
-    clearInterval(timer);
-    btn.disabled = false;
     statusEl.className = 'status err';
     statusEl.textContent = 'Request failed: ' + e;
   }
+
+  clearInterval(timer);
+  btn.disabled = false;
+
+  if (results.length > 0) {
+    statusEl.className = 'status';
+    statusEl.textContent = 'Done! Made ' + results.length + ' of ' + count + '. Latest is Creation #' + lastGenNum + '. Great job!';
+    loadStats();
+    loadGallery();
+
+    if (lastPokemonReveal) {
+      const reveal = document.createElement('div');
+      reveal.className = lastPokemonReveal.shiny ? 'pokemonReveal shiny' : 'pokemonReveal';
+      reveal.textContent = lastPokemonReveal.shiny
+        ? 'SHINY ' + lastPokemonReveal.name.toUpperCase() + '! You got insanely lucky!!'
+        : 'You got a ' + lastPokemonReveal.name + '!';
+      resultEl.appendChild(reveal);
+      lastPokemonReveal = null;
+    }
+
+    for (const data of results) {
+      const item = document.createElement('div');
+      item.className = 'resultItem';
+      if (data.kind === 'video') {
+        item.innerHTML = '<video src="' + data.url + '" controls autoplay loop></video><br><a class="dl" href="' + data.url + '" download>Download</a>';
+      } else {
+        item.innerHTML = '<img src="' + data.url + '"><br><a class="dl" href="' + data.url + '" download>Download</a>';
+      }
+      resultEl.appendChild(item);
+    }
+  }
+}
 }
 
 loadModels();
