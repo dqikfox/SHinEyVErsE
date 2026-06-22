@@ -33,6 +33,27 @@ def get_wan_negative_default():
 
 WAN_NEG_DEFAULT = get_wan_negative_default()
 
+import re
+COUNTER_FILE = Path(__file__).parent / "generation_count.txt"
+
+def next_generation_number():
+    n = 1
+    if COUNTER_FILE.exists():
+        try:
+            n = int(COUNTER_FILE.read_text().strip()) + 1
+        except Exception:
+            n = 1
+    COUNTER_FILE.write_text(str(n))
+    return n
+
+def slugify_prompt(prompt, max_len=40):
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", prompt.strip()).strip("_").lower()
+    if not slug:
+        slug = "creation"
+    if len(slug) > max_len:
+        slug = slug[:max_len].rstrip("_")
+    return slug
+
 app = FastAPI(title="SHInEyVErSE")
 
 class BasicAuthMiddleware(BaseHTTPMiddleware):
@@ -55,11 +76,11 @@ app.mount("/files/Images", StaticFiles(directory=str(AI_IMAGES)), name="images")
 app.mount("/files/Videos", StaticFiles(directory=str(AI_VIDEOS)), name="videos")
 
 MODEL_INFO = {
-    "sd15":         {"kind": "image",      "label": "Stable Diffusion 1.5 (fastest)",        "width": 512,  "height": 512,  "steps": 20, "cfg": 8.0, "sampler": "euler",  "scheduler": "normal"},
-    "sdxl":         {"kind": "image",      "label": "SDXL (balanced)",                       "width": 1024, "height": 1024, "steps": 20, "cfg": 8.0, "sampler": "euler",  "scheduler": "normal"},
-    "flux":         {"kind": "image",      "label": "Flux Schnell (best quality)",           "width": 1024, "height": 1024, "steps": 4,  "cfg": 1.0, "sampler": "euler",  "scheduler": "simple"},
-    "wan22_5b":     {"kind": "video",      "label": "Wan2.2 5B Text-to-Video",               "width": 1280, "height": 704,  "steps": 20, "cfg": 5.0, "sampler": "uni_pc", "scheduler": "simple", "length": 121, "fps": 24},
-    "wan22_14b_i2v":{"kind": "video_i2v",  "label": "Wan2.2 14B Image-to-Video (Lightning)", "width": 640,  "height": 640,  "steps": 4,  "cfg": 1.0, "sampler": "euler",  "scheduler": "simple", "length": 81,  "fps": 16},
+    "sd15":         {"kind": "image",      "label": "Quick Sketch (fast!)",                  "width": 512,  "height": 512,  "steps": 20, "cfg": 8.0, "sampler": "euler",  "scheduler": "normal"},
+    "sdxl":         {"kind": "image",      "label": "Nice Picture (balanced)",               "width": 1024, "height": 1024, "steps": 20, "cfg": 8.0, "sampler": "euler",  "scheduler": "normal"},
+    "flux":         {"kind": "image",      "label": "Amazing Picture (best quality)",        "width": 1024, "height": 1024, "steps": 4,  "cfg": 1.0, "sampler": "euler",  "scheduler": "simple"},
+    "wan22_5b":     {"kind": "video",      "label": "Make a Movie (from your words)",        "width": 1280, "height": 704,  "steps": 20, "cfg": 5.0, "sampler": "uni_pc", "scheduler": "simple", "length": 121, "fps": 24},
+    "wan22_14b_i2v":{"kind": "video_i2v",  "label": "Bring a Picture to Life (photo to movie)", "width": 640,  "height": 640,  "steps": 4,  "cfg": 1.0, "sampler": "euler",  "scheduler": "simple", "length": 81,  "fps": 16},
 }
 def build_graph(model, prompt, negative, width, height, steps, cfg, seed, sampler, scheduler, length, fps, prefix, image_filename=None):
     if model in ("sd15", "sdxl"):
@@ -183,7 +204,8 @@ def generate(
     fps: int = Form(24),
     image_filename: str = Form(""),
 ):
-    prefix = f"SHInEyVErSE_{int(time.time())}"
+    gen_num = next_generation_number()
+    prefix = f"{gen_num:04d}_{slugify_prompt(prompt)}"
     try:
         graph, kind = build_graph(model, prompt, negative, width, height, steps, cfg, seed, sampler, scheduler, length, fps, prefix, image_filename or None)
     except ValueError as e:
@@ -205,7 +227,7 @@ def generate(
                 if status.get("status_str") == "success":
                     url = find_and_store_output(entry, kind, prefix)
                     if url:
-                        return JSONResponse({"ok": True, "kind": kind, "url": url})
+                        return JSONResponse({"ok": True, "kind": kind, "url": url, "gen_num": gen_num})
                     return JSONResponse({"ok": False, "error": "Generation succeeded but output file could not be located."})
                 else:
                     msgs = status.get("messages", [])
@@ -213,6 +235,16 @@ def generate(
                     return JSONResponse({"ok": False, "error": err})
         time.sleep(2)
     return JSONResponse({"ok": False, "error": "Timed out waiting for generation."})
+
+@app.get("/stats")
+def stats():
+    total = 0
+    if COUNTER_FILE.exists():
+        try:
+            total = int(COUNTER_FILE.read_text().strip())
+        except Exception:
+            total = 0
+    return {"total": total}
 
 @app.get("/models")
 def models():
@@ -316,6 +348,32 @@ HTML_PAGE = r"""
   h2 { font-family:'Baloo 2',cursive; font-size:20px; color:#ff6fa5; }
   h2::before { content: "\02728 "; }
   .preview { max-width:200px; border-radius:14px; margin-top:8px; display:none; border:3px solid #ffc9e2; }
+  .counter {
+    text-align:center; font-weight:800; font-family:'Baloo 2',cursive; color:#ff8fc0;
+    font-size:15px; margin-bottom:18px;
+  }
+  .qmark {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:50%;
+    background:#ffd1e6; color:#d9477f; font-size:11px; font-weight:800;
+    cursor:help; margin-left:2px; vertical-align:middle;
+  }
+  .starters { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .starter {
+    background:#fff7fb; color:#d9477f; border:2px solid #ffc9e2; border-radius:14px;
+    padding:6px 14px; font-size:13px; font-weight:700; font-family:'Quicksand',sans-serif;
+    cursor:pointer; margin-top:0; box-shadow:none;
+  }
+  .starter:hover { background:#ffe1ef; transform:none; }
+  .surprise {
+    margin-top:10px; margin-left:0;
+    background: linear-gradient(180deg,#b0e8ff,#7fd0ff); color:#0a5a82;
+    border:3px solid #fff; box-shadow:4px 4px 0 #4fa8d9;
+  }
+  details.advanced { margin-top:18px; border-top:2px dashed #ffd1e6; padding-top:14px; }
+  details.advanced summary {
+    cursor:pointer; font-family:'Baloo 2',cursive; color:#b3568f; font-weight:700; font-size:14px;
+  }
   .dl {
     display:inline-block; margin-top:8px; padding:6px 14px;
     background:#fff0f6; color:#d9477f; border:2px solid #ffb6d9; border-radius:14px;
@@ -330,102 +388,110 @@ HTML_PAGE = r"""
 <div class="wrap">
   <h1>SHInEyVErSE</h1>
   <div class="sub">Local image &amp; video generation - powered by your ComfyUI install</div>
+  <div class="counter" id="counterBadge">Loading creations counter...</div>
 
   <div class="card">
-    <label>Prompt</label>
-    <textarea id="prompt" placeholder="Describe what you want to create..."></textarea>
+    <label>What should I make? <span class="qmark" title="Tell me what to draw or make a movie of! Be as silly or amazing as you want.">?</span></label>
+    <textarea id="prompt" placeholder="Type your idea here, or tap a button below for inspiration!"></textarea>
 
-    <label>Negative prompt (optional - leave blank for sensible default)</label>
-    <textarea id="negative" placeholder="Things to avoid in the result"></textarea>
+    <div class="starters" id="starters"></div>
+    <button type="button" class="surprise" onclick="surpriseMe()">Surprise Me!</button>
 
     <div class="row">
       <div>
-        <label>Mode</label>
+        <label>Picture or Movie? <span class="qmark" title="Pick Picture for a still image, or Movie for something that moves!">?</span></label>
         <select id="mode">
-          <option value="image">Image</option>
-          <option value="video">Video (text-to-video)</option>
-          <option value="video_i2v">Video (image-to-video)</option>
+          <option value="image">Picture</option>
+          <option value="video">Movie (from words)</option>
+          <option value="video_i2v">Movie (from a photo)</option>
         </select>
       </div>
       <div>
-        <label>Model</label>
+        <label>Style <span class="qmark" title="Different styles look different and take different amounts of time!">?</span></label>
         <select id="model"></select>
       </div>
     </div>
 
     <div class="i2vOnly" id="imageUploadField">
-      <label>Starting image</label>
+      <label>Starting photo <span class="qmark" title="Upload a picture to bring to life as a movie!">?</span></label>
       <input type="file" id="imageFile" accept="image/*">
       <img id="imagePreview" class="preview">
     </div>
 
-    <div class="row">
-      <div>
-        <label>Width</label>
-        <input type="number" id="width" step="8">
-      </div>
-      <div>
-        <label>Height</label>
-        <input type="number" id="height" step="8">
-      </div>
-    </div>
-
-    <div class="row videoOnly" id="videoFields">
-      <div>
-        <label>Length (frames)</label>
-        <input type="number" id="length">
-        <div class="hint">at 24fps, 121 frames ~= 5 seconds</div>
-      </div>
-      <div>
-        <label>FPS</label>
-        <input type="number" id="fps">
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Steps</label>
-        <input type="number" id="steps">
-      </div>
-      <div>
-        <label>CFG</label>
-        <input type="number" id="cfg" step="0.1">
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Sampler</label>
-        <select id="sampler">
-          <option>euler</option>
-          <option>euler_ancestral</option>
-          <option>dpmpp_2m</option>
-          <option>uni_pc</option>
-        </select>
-      </div>
-      <div>
-        <label>Scheduler</label>
-        <select id="scheduler">
-          <option>normal</option>
-          <option>simple</option>
-          <option>karras</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row">
-      <div>
-        <label>Seed</label>
-        <input type="number" id="seed" value="0">
-      </div>
-      <div class="check" style="margin-top:34px;">
-        <input type="checkbox" id="randomize" checked>
-        <label style="margin:0;">Randomize seed each run</label>
-      </div>
-    </div>
-
-    <button id="goBtn" onclick="generate()">Generate</button>
+    <button id="goBtn" onclick="generate()">Make It!</button>
     <div class="status" id="status"></div>
+
+    <details class="advanced">
+      <summary>Grown-up settings</summary>
+
+      <label>Negative prompt <span class="qmark" title="Things you do NOT want to see in the result (optional).">?</span></label>
+      <textarea id="negative" placeholder="Things to avoid in the result"></textarea>
+
+      <div class="row">
+        <div>
+          <label>Width <span class="qmark" title="How wide the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
+          <input type="number" id="width" step="8">
+        </div>
+        <div>
+          <label>Height <span class="qmark" title="How tall the picture is, in pixels. Bigger = more detail but slower.">?</span></label>
+          <input type="number" id="height" step="8">
+        </div>
+      </div>
+
+      <div class="row videoOnly" id="videoFields">
+        <div>
+          <label>Length (frames) <span class="qmark" title="How long the movie is. More frames = longer movie but slower to make.">?</span></label>
+          <input type="number" id="length">
+          <div class="hint">at 24fps, 121 frames ~= 5 seconds</div>
+        </div>
+        <div>
+          <label>FPS <span class="qmark" title="Frames Per Second - how smooth the movie looks.">?</span></label>
+          <input type="number" id="fps">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Steps <span class="qmark" title="How many times the computer polishes the picture. More steps can look better but takes longer!">?</span></label>
+          <input type="number" id="steps">
+        </div>
+        <div>
+          <label>CFG <span class="qmark" title="How closely the computer follows your exact words. Higher = more obedient, lower = more creative.">?</span></label>
+          <input type="number" id="cfg" step="0.1">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Sampler <span class="qmark" title="A technical setting for HOW the computer paints. Fun to experiment with!">?</span></label>
+          <select id="sampler">
+            <option>euler</option>
+            <option>euler_ancestral</option>
+            <option>dpmpp_2m</option>
+            <option>uni_pc</option>
+          </select>
+        </div>
+        <div>
+          <label>Scheduler <span class="qmark" title="Another technical painting setting - works together with Sampler.">?</span></label>
+          <select id="scheduler">
+            <option>normal</option>
+            <option>simple</option>
+            <option>karras</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Seed <span class="qmark" title="A magic number behind the randomness. The same seed + same prompt = the exact same picture again!">?</span></label>
+          <input type="number" id="seed" value="0">
+        </div>
+        <div class="check" style="margin-top:34px;">
+          <input type="checkbox" id="randomize" checked>
+          <label style="margin:0;">Randomize seed each run <span class="qmark" title="Tick this to get a brand new surprise every time you click Make It!">?</span></label>
+        </div>
+      </div>
+    </details>
   </div>
 
   <div class="result" id="result"></div>
@@ -437,6 +503,45 @@ HTML_PAGE = r"""
 </div>
 <script>
 let MODELS = {};
+
+const STARTER_PROMPTS = [
+  ["Unicorn", "a cute fluffy unicorn with a sparkly rainbow mane, dreamy pastel colors"],
+  ["Rainbow", "a giant magical rainbow over a green meadow, fluffy clouds, sunshine"],
+  ["Dragon", "a friendly cartoon dragon with big round eyes, breathing colorful sparkles instead of fire"],
+  ["Castle", "a pink fairytale castle with tall towers, flags, and a rainbow in the sky behind it"],
+  ["Puppy", "a fluffy golden puppy playing in a field of flowers, big happy eyes"],
+  ["Fairy", "a tiny glowing fairy with butterfly wings sitting on a mushroom in an enchanted forest"],
+  ["Mermaid", "a friendly cartoon mermaid with a colorful tail swimming near a coral reef"],
+  ["Ice cream", "a giant rainbow ice cream cone with sprinkles, melting in a sunny park"],
+  ["Dinosaur", "a cute baby dinosaur with big eyes playing in a jungle, friendly and round-shaped"],
+  ["Space", "a cute astronaut cat floating among colorful stars and planets"],
+];
+
+function buildStarterButtons() {
+  const wrap = document.getElementById('starters');
+  wrap.innerHTML = '';
+  for (const [label, fullPrompt] of STARTER_PROMPTS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'starter';
+    b.textContent = label;
+    b.onclick = () => { document.getElementById('prompt').value = fullPrompt; };
+    wrap.appendChild(b);
+  }
+}
+
+function surpriseMe() {
+  const pick = STARTER_PROMPTS[Math.floor(Math.random() * STARTER_PROMPTS.length)];
+  document.getElementById('prompt').value = pick[1];
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch('/stats');
+    const data = await r.json();
+    document.getElementById('counterBadge').textContent = 'You have made ' + data.total + ' magical creations so far!';
+  } catch (e) {}
+}
 
 async function loadModels() {
   const r = await fetch('/models');
@@ -569,7 +674,7 @@ async function generate() {
     clearInterval(timer);
     btn.disabled = false;
     if (data.ok) {
-      statusEl.textContent = 'Done.';
+      statusEl.textContent = 'Done! This is Creation #' + data.gen_num + '. Great job!'; loadStats();
       if (data.kind === 'video') {
         resultEl.innerHTML = '<video src="' + data.url + '" controls autoplay loop></video><br><a class="dl" href="' + data.url + '" download>Download</a>';
       } else {
@@ -589,6 +694,9 @@ async function generate() {
 }
 
 loadModels();
+loadGallery();
+loadStats();
+buildStarterButtons();
 loadGallery();
 </script>
 </body>
