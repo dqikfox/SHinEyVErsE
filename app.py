@@ -4,6 +4,13 @@ import requests
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from dotenv import load_dotenv
+import os, secrets, base64
+
+load_dotenv(Path(__file__).parent / ".env")
+SHINYVERSE_PASSWORD = os.environ.get("SHINYVERSE_PASSWORD", "")
 
 COMFY_URL = "http://127.0.0.1:8188"
 COMFY_OUTPUT = Path(r"C:\Users\Shadow\ComfyUI\output")
@@ -27,6 +34,23 @@ def get_wan_negative_default():
 WAN_NEG_DEFAULT = get_wan_negative_default()
 
 app = FastAPI(title="SHInEyVErSE")
+
+class BasicAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if not SHINYVERSE_PASSWORD:
+            return await call_next(request)
+        auth = request.headers.get("authorization", "")
+        if auth.startswith("Basic "):
+            try:
+                decoded = base64.b64decode(auth[6:]).decode()
+                _, _, pw = decoded.partition(":")
+                if secrets.compare_digest(pw, SHINYVERSE_PASSWORD):
+                    return await call_next(request)
+            except Exception:
+                pass
+        return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="SHInEyVErSE"'})
+
+app.add_middleware(BasicAuthMiddleware)
 app.mount("/files/Images", StaticFiles(directory=str(AI_IMAGES)), name="images")
 app.mount("/files/Videos", StaticFiles(directory=str(AI_VIDEOS)), name="videos")
 
