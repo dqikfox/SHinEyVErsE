@@ -316,6 +316,14 @@ HTML_PAGE = r"""
   h2 { font-family:'Baloo 2',cursive; font-size:20px; color:#ff6fa5; }
   h2::before { content: "\02728 "; }
   .preview { max-width:200px; border-radius:14px; margin-top:8px; display:none; border:3px solid #ffc9e2; }
+  .dl {
+    display:inline-block; margin-top:8px; padding:6px 14px;
+    background:#fff0f6; color:#d9477f; border:2px solid #ffb6d9; border-radius:14px;
+    text-decoration:none; font-weight:700; font-size:12px; font-family:'Quicksand',sans-serif;
+  }
+  .dl:hover { background:#ffd1e6; }
+  .gallery .item { padding-bottom:2px; }
+  .gallery .dl { font-size:9px; padding:3px 8px; margin:4px; }
 </style>
 </head>
 <body>
@@ -493,9 +501,9 @@ async function loadGallery() {
     const div = document.createElement('div');
     div.className = 'item';
     if (it.kind === 'video') {
-      div.innerHTML = '<video src="' + it.url + '" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video><div class="name">' + it.name + '</div>';
+      div.innerHTML = '<video src="' + it.url + '" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video><a class="dl" href="' + it.url + '" download="' + it.name + '">Download</a><div class="name">' + it.name + '</div>';
     } else {
-      div.innerHTML = '<img src="' + it.url + '"><div class="name">' + it.name + '</div>';
+      div.innerHTML = '<img src="' + it.url + '"><a class="dl" href="' + it.url + '" download="' + it.name + '">Download</a><div class="name">' + it.name + '</div>';
     }
     g.appendChild(div);
   }
@@ -563,9 +571,9 @@ async function generate() {
     if (data.ok) {
       statusEl.textContent = 'Done.';
       if (data.kind === 'video') {
-        resultEl.innerHTML = '<video src="' + data.url + '" controls autoplay loop></video>';
+        resultEl.innerHTML = '<video src="' + data.url + '" controls autoplay loop></video><br><a class="dl" href="' + data.url + '" download>Download</a>';
       } else {
-        resultEl.innerHTML = '<img src="' + data.url + '">';
+        resultEl.innerHTML = '<img src="' + data.url + '"><br><a class="dl" href="' + data.url + '" download>Download</a>';
       }
       loadGallery();
     } else {
